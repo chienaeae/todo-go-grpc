@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package todoGoGrpc;
+
+option go_package = "./pb;pb";
+
+message Todo {
+  string id = 1;
+  string title = 2;
+}

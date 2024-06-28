@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package todoGoGrpc;
+
+option go_package = "./pb;pb";
+
+import "todo_message.proto";
+
+message CreateTodoRequest { Todo todo = 1; }
+
+message CreateTodoResponse { string id = 1; }
+
+message GetTodosRequest {}
+
+message GetTodosResponse { Todo todo = 1; }
+
+message GetTodoRequest { string id = 1; }
+
+message GetTodoResponse { Todo todo = 1; }
+
+service TodoService {
+  rpc CreateTodo(CreateTodoRequest) returns (CreateTodoResponse);
+  rpc GetTodos(GetTodosRequest) returns (stream GetTodosResponse);
+  rpc GetTodo(GetTodoRequest) returns (GetTodoResponse);
+}
