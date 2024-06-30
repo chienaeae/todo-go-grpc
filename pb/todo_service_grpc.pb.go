@@ -25,6 +25,7 @@ type TodoServiceClient interface {
 	CreateTodo(ctx context.Context, in *CreateTodoRequest, opts ...grpc.CallOption) (*CreateTodoResponse, error)
 	GetTodos(ctx context.Context, in *GetTodosRequest, opts ...grpc.CallOption) (TodoService_GetTodosClient, error)
 	GetTodo(ctx context.Context, in *GetTodoRequest, opts ...grpc.CallOption) (*GetTodoResponse, error)
+	UploadImage(ctx context.Context, opts ...grpc.CallOption) (TodoService_UploadImageClient, error)
 }
 
 type todoServiceClient struct {
@@ -85,6 +86,40 @@ func (c *todoServiceClient) GetTodo(ctx context.Context, in *GetTodoRequest, opt
 	return out, nil
 }
 
+func (c *todoServiceClient) UploadImage(ctx context.Context, opts ...grpc.CallOption) (TodoService_UploadImageClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TodoService_ServiceDesc.Streams[1], "/todoGoGrpc.TodoService/UploadImage", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &todoServiceUploadImageClient{stream}
+	return x, nil
+}
+
+type TodoService_UploadImageClient interface {
+	Send(*UploadImageRequest) error
+	CloseAndRecv() (*UploadImageResponse, error)
+	grpc.ClientStream
+}
+
+type todoServiceUploadImageClient struct {
+	grpc.ClientStream
+}
+
+func (x *todoServiceUploadImageClient) Send(m *UploadImageRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *todoServiceUploadImageClient) CloseAndRecv() (*UploadImageResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(UploadImageResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TodoServiceServer is the server API for TodoService service.
 // All implementations must embed UnimplementedTodoServiceServer
 // for forward compatibility
@@ -92,6 +127,7 @@ type TodoServiceServer interface {
 	CreateTodo(context.Context, *CreateTodoRequest) (*CreateTodoResponse, error)
 	GetTodos(*GetTodosRequest, TodoService_GetTodosServer) error
 	GetTodo(context.Context, *GetTodoRequest) (*GetTodoResponse, error)
+	UploadImage(TodoService_UploadImageServer) error
 	mustEmbedUnimplementedTodoServiceServer()
 }
 
@@ -107,6 +143,9 @@ func (UnimplementedTodoServiceServer) GetTodos(*GetTodosRequest, TodoService_Get
 }
 func (UnimplementedTodoServiceServer) GetTodo(context.Context, *GetTodoRequest) (*GetTodoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTodo not implemented")
+}
+func (UnimplementedTodoServiceServer) UploadImage(TodoService_UploadImageServer) error {
+	return status.Errorf(codes.Unimplemented, "method UploadImage not implemented")
 }
 func (UnimplementedTodoServiceServer) mustEmbedUnimplementedTodoServiceServer() {}
 
@@ -178,6 +217,32 @@ func _TodoService_GetTodo_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TodoService_UploadImage_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TodoServiceServer).UploadImage(&todoServiceUploadImageServer{stream})
+}
+
+type TodoService_UploadImageServer interface {
+	SendAndClose(*UploadImageResponse) error
+	Recv() (*UploadImageRequest, error)
+	grpc.ServerStream
+}
+
+type todoServiceUploadImageServer struct {
+	grpc.ServerStream
+}
+
+func (x *todoServiceUploadImageServer) SendAndClose(m *UploadImageResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *todoServiceUploadImageServer) Recv() (*UploadImageRequest, error) {
+	m := new(UploadImageRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TodoService_ServiceDesc is the grpc.ServiceDesc for TodoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -199,6 +264,11 @@ var TodoService_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "GetTodos",
 			Handler:       _TodoService_GetTodos_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "UploadImage",
+			Handler:       _TodoService_UploadImage_Handler,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "todo_service.proto",

@@ -11,13 +11,15 @@ import (
 	"google.golang.org/grpc"
 )
 
-func main () {
+func main() {
 	port := flag.Int("port", 0, "the server port")
 	flag.Parse()
 
 	todoStore := service.NewInMemoryTodoStore()
+	imageStore := service.NewDiskImageStore("img")
 	todoServer := service.NewTodoServer(
 		todoStore,
+		imageStore,
 	)
 
 	address := fmt.Sprintf("0.0.0.0:%d", *port)

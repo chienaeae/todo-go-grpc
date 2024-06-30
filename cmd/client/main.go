@@ -18,7 +18,14 @@ func testGetTodos(todoClient *client.TodoClient) {
 	todoClient.GetTodos()
 }
 
-func main () {
+func testUploadImage(todoClient *client.TodoClient) {
+	todo := sample.NewTodo()
+	todoClient.CreateTodo(todo)
+	todoClient.UploadImage(todo.Id, "tmp/todo.png")
+	todoClient.UploadImage(todo.Id, "tmp/aoi.jpeg")
+}
+
+func main() {
 	serverAddress := flag.String("address", "", "the server address")
 	flag.Parse()
 
@@ -32,6 +39,6 @@ func main () {
 	todoClient := client.NewTodoClient(cc)
 
 	testCreateTodo(todoClient)
-	testCreateTodo(todoClient)
 	testGetTodos(todoClient)
+	testUploadImage(todoClient)
 }

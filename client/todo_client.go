@@ -1,9 +1,12 @@
 package client
 
 import (
+	"bufio"
 	"context"
 	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/chienaeae/todo-go-grpc/pb"
@@ -21,10 +24,10 @@ func NewTodoClient(cc *grpc.ClientConn) *TodoClient {
 	return &TodoClient{service}
 }
 
-func (todoClient *TodoClient) CreateTodo (todo *pb.Todo) {
+func (todoClient *TodoClient) CreateTodo(todo *pb.Todo) {
 	log.Println("=== CreateTodo ===")
 
-	req := &pb.CreateTodoRequest {
+	req := &pb.CreateTodoRequest{
 		Todo: todo,
 	}
 
@@ -35,22 +38,22 @@ func (todoClient *TodoClient) CreateTodo (todo *pb.Todo) {
 	if err != nil {
 		st, ok := status.FromError(err)
 		if ok {
-			switch (st.Code()) {
+			switch st.Code() {
 			case codes.AlreadyExists:
 				log.Print("todo already exists")
 			}
-		}else {
+		} else {
 			log.Fatal("cannot create todo: ", err)
 		}
-		return 
+		return
 	}
 
 	log.Printf("created todo with ID: %s", res.Id)
 }
 
-func (todoClient *TodoClient) GetTodos () {
+func (todoClient *TodoClient) GetTodos() {
 	log.Println("=== GetTodos ===")
-	req := &pb.GetTodosRequest {}
+	req := &pb.GetTodosRequest{}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -72,4 +75,65 @@ func (todoClient *TodoClient) GetTodos () {
 		log.Printf("<%s>", todo.Id)
 		log.Print("title: ", todo.Title)
 	}
+}
+
+func (laptopClient *TodoClient) UploadImage(todoID string, imagePath string) {
+	log.Println("=== UploadImage ===")
+	file, err := os.Open(imagePath)
+	if err != nil {
+		log.Fatal("cannot open image file: ", err)
+	}
+	defer file.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	stream, err := laptopClient.service.UploadImage(ctx)
+	if err != nil {
+		log.Fatal("cannot upload image: ", err)
+	}
+
+	req := &pb.UploadImageRequest{
+		Data: &pb.UploadImageRequest_ImageInfo{
+			ImageInfo: &pb.ImageInfo{
+				TodoId:    todoID,
+				ImageType: filepath.Ext(imagePath),
+			},
+		},
+	}
+
+	err = stream.Send(req)
+	if err != nil {
+		log.Fatal("cannot send image info to server: ", err, stream.RecvMsg(nil))
+	}
+
+	reader := bufio.NewReader(file)
+	buffer := make([]byte, 1024)
+
+	for {
+		n, err := reader.Read(buffer)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal("cannot read chunk to buffer: ", err)
+		}
+
+		req := &pb.UploadImageRequest{
+			Data: &pb.UploadImageRequest_ChunkData{
+				ChunkData: buffer[:n],
+			},
+		}
+
+		err = stream.Send(req)
+		if err != nil {
+			log.Fatal("cannot send chunk to server: ", err, stream.RecvMsg(nil))
+		}
+	}
+	res, err := stream.CloseAndRecv()
+	if err != nil {
+		log.Fatal("cannot receive response: ", err)
+	}
+
+	log.Printf("image uploaded with id: %s, size: %d", res.GetId(), res.GetSize())
 }

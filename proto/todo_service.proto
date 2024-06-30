@@ -18,8 +18,26 @@ message GetTodoRequest { string id = 1; }
 
 message GetTodoResponse { Todo todo = 1; }
 
+message ImageInfo {
+  string todo_id = 1;
+  string image_type = 2;
+}
+
+message UploadImageRequest {
+  oneof data {
+    ImageInfo image_info = 1;
+    bytes chunk_data = 2;
+  }
+}
+
+message UploadImageResponse {
+  string id = 1;
+  uint32 size = 2;
+}
+
 service TodoService {
   rpc CreateTodo(CreateTodoRequest) returns (CreateTodoResponse);
   rpc GetTodos(GetTodosRequest) returns (stream GetTodosResponse);
   rpc GetTodo(GetTodoRequest) returns (GetTodoResponse);
+  rpc UploadImage(stream UploadImageRequest) returns (UploadImageResponse);
 }
