@@ -33,6 +33,10 @@ func NewTodoServer(todoStore TodoStore, imageStore ImageStore, feedbackStore Fee
 
 func (server *TodoServer) CreateTodo(ctx context.Context, req *pb.CreateTodoRequest) (*pb.CreateTodoResponse, error) {
 	todo := req.GetTodo()
+	if todo == nil {
+		return nil, status.Error(codes.InvalidArgument, "todo is required")
+	}
+
 	if len(todo.Id) > 0 {
 		if _, err := uuid.Parse(todo.Id); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "todo ID is not a valid UUID: %v", err)
