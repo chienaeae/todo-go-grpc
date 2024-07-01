@@ -18,14 +18,16 @@ const maxImageSize = 1 << 20
 
 type TodoServer struct {
 	pb.UnimplementedTodoServiceServer
-	todoStore  TodoStore
-	imageStore ImageStore
+	todoStore     TodoStore
+	imageStore    ImageStore
+	feedbackStore FeedbackStore
 }
 
-func NewTodoServer(todoStore TodoStore, imageStore ImageStore) *TodoServer {
+func NewTodoServer(todoStore TodoStore, imageStore ImageStore, feedbackStore FeedbackStore) *TodoServer {
 	return &TodoServer{
-		todoStore:  todoStore,
-		imageStore: imageStore,
+		todoStore:     todoStore,
+		imageStore:    imageStore,
+		feedbackStore: feedbackStore,
 	}
 }
 
@@ -137,7 +139,7 @@ func (server *TodoServer) UploadImage(stream pb.TodoService_UploadImageServer) e
 
 		req, err = stream.Recv()
 		if err == io.EOF {
-			log.Print("no more data")
+			log.Print("no more image bytes data")
 			break
 		}
 		if err != nil {
@@ -176,6 +178,55 @@ func (server *TodoServer) UploadImage(stream pb.TodoService_UploadImageServer) e
 	}
 
 	log.Printf("saved image with id: %s, size: %d", imageID, imageSize)
+	return nil
+}
+
+func (server *TodoServer) FeebackTodo(stream pb.TodoService_FeebackTodoServer) error {
+	for {
+		err := contextError(stream.Context())
+		if err != nil {
+			return nil
+		}
+
+		req, err := stream.Recv()
+		if err == io.EOF {
+			log.Print("no more feeback data")
+			break
+		}
+		if err != nil {
+			return logError(status.Errorf(codes.Internal, "cannot receive stream request: %v", err))
+		}
+
+		todoID := req.GetTodoId()
+		content := req.GetContent()
+
+		log.Printf("received a feedback request: id = %s", todoID)
+
+		found, err := server.todoStore.GetById(todoID)
+		if err != nil {
+			return logError(status.Errorf(codes.Internal, "cannot find todo: %v", err))
+		}
+
+		if found == nil {
+			return logError(status.Errorf(codes.NotFound, "todoID %s is not found", todoID))
+		}
+
+		feedback, err := server.feedbackStore.Add(todoID, content)
+		if err != nil {
+			return logError(status.Errorf(codes.Internal, "cannot add feeback to the store: %v", err))
+		}
+
+		res := &pb.FeedbackTodoResponse{
+			TodoId:     todoID,
+			FeedbackId: feedback.ID,
+		}
+
+		err = stream.Send(res)
+		if err != nil {
+			return logError(status.Errorf(codes.Unknown, "cannot send stream response: %v", err))
+		}
+	}
+
 	return nil
 }
 

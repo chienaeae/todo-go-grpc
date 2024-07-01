@@ -17,9 +17,11 @@ func main() {
 
 	todoStore := service.NewInMemoryTodoStore()
 	imageStore := service.NewDiskImageStore("img")
+	feedbackStore := service.NewInMemoryFeedbackStore()
 	todoServer := service.NewTodoServer(
 		todoStore,
 		imageStore,
+		feedbackStore,
 	)
 
 	address := fmt.Sprintf("0.0.0.0:%d", *port)

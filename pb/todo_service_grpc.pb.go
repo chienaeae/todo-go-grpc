@@ -26,6 +26,7 @@ type TodoServiceClient interface {
 	GetTodos(ctx context.Context, in *GetTodosRequest, opts ...grpc.CallOption) (TodoService_GetTodosClient, error)
 	GetTodo(ctx context.Context, in *GetTodoRequest, opts ...grpc.CallOption) (*GetTodoResponse, error)
 	UploadImage(ctx context.Context, opts ...grpc.CallOption) (TodoService_UploadImageClient, error)
+	FeebackTodo(ctx context.Context, opts ...grpc.CallOption) (TodoService_FeebackTodoClient, error)
 }
 
 type todoServiceClient struct {
@@ -120,6 +121,37 @@ func (x *todoServiceUploadImageClient) CloseAndRecv() (*UploadImageResponse, err
 	return m, nil
 }
 
+func (c *todoServiceClient) FeebackTodo(ctx context.Context, opts ...grpc.CallOption) (TodoService_FeebackTodoClient, error) {
+	stream, err := c.cc.NewStream(ctx, &TodoService_ServiceDesc.Streams[2], "/todoGoGrpc.TodoService/FeebackTodo", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &todoServiceFeebackTodoClient{stream}
+	return x, nil
+}
+
+type TodoService_FeebackTodoClient interface {
+	Send(*FeedbackTodoRequest) error
+	Recv() (*FeedbackTodoResponse, error)
+	grpc.ClientStream
+}
+
+type todoServiceFeebackTodoClient struct {
+	grpc.ClientStream
+}
+
+func (x *todoServiceFeebackTodoClient) Send(m *FeedbackTodoRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *todoServiceFeebackTodoClient) Recv() (*FeedbackTodoResponse, error) {
+	m := new(FeedbackTodoResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TodoServiceServer is the server API for TodoService service.
 // All implementations must embed UnimplementedTodoServiceServer
 // for forward compatibility
@@ -128,6 +160,7 @@ type TodoServiceServer interface {
 	GetTodos(*GetTodosRequest, TodoService_GetTodosServer) error
 	GetTodo(context.Context, *GetTodoRequest) (*GetTodoResponse, error)
 	UploadImage(TodoService_UploadImageServer) error
+	FeebackTodo(TodoService_FeebackTodoServer) error
 	mustEmbedUnimplementedTodoServiceServer()
 }
 
@@ -146,6 +179,9 @@ func (UnimplementedTodoServiceServer) GetTodo(context.Context, *GetTodoRequest) 
 }
 func (UnimplementedTodoServiceServer) UploadImage(TodoService_UploadImageServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadImage not implemented")
+}
+func (UnimplementedTodoServiceServer) FeebackTodo(TodoService_FeebackTodoServer) error {
+	return status.Errorf(codes.Unimplemented, "method FeebackTodo not implemented")
 }
 func (UnimplementedTodoServiceServer) mustEmbedUnimplementedTodoServiceServer() {}
 
@@ -243,6 +279,32 @@ func (x *todoServiceUploadImageServer) Recv() (*UploadImageRequest, error) {
 	return m, nil
 }
 
+func _TodoService_FeebackTodo_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(TodoServiceServer).FeebackTodo(&todoServiceFeebackTodoServer{stream})
+}
+
+type TodoService_FeebackTodoServer interface {
+	Send(*FeedbackTodoResponse) error
+	Recv() (*FeedbackTodoRequest, error)
+	grpc.ServerStream
+}
+
+type todoServiceFeebackTodoServer struct {
+	grpc.ServerStream
+}
+
+func (x *todoServiceFeebackTodoServer) Send(m *FeedbackTodoResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *todoServiceFeebackTodoServer) Recv() (*FeedbackTodoRequest, error) {
+	m := new(FeedbackTodoRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // TodoService_ServiceDesc is the grpc.ServiceDesc for TodoService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -268,6 +330,12 @@ var TodoService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "UploadImage",
 			Handler:       _TodoService_UploadImage_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "FeebackTodo",
+			Handler:       _TodoService_FeebackTodo_Handler,
+			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},

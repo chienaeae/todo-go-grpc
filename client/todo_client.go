@@ -3,6 +3,7 @@ package client
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -136,4 +137,61 @@ func (laptopClient *TodoClient) UploadImage(todoID string, imagePath string) {
 	}
 
 	log.Printf("image uploaded with id: %s, size: %d", res.GetId(), res.GetSize())
+}
+
+type CreateFeedback struct {
+	TodoID  string
+	Content string
+}
+
+func (laptopClient *TodoClient) FeebackTodo(createFeedbacks []CreateFeedback) {
+	log.Println("=== FeebackTodo ===")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	stream, err := laptopClient.service.FeebackTodo(ctx)
+	if err != nil {
+		log.Fatal("cannot feedback todo: ", err)
+	}
+
+	waitResponse := make(chan error)
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				log.Print("no more response")
+				waitResponse <- nil
+				return
+			}
+			if err != nil {
+				waitResponse <- fmt.Errorf("cannot receive stream response: %v", err)
+			}
+
+			log.Print("received response: ", res)
+		}
+	}()
+
+	for _, createFeedback := range createFeedbacks {
+		req := &pb.FeedbackTodoRequest{
+			TodoId:  createFeedback.TodoID,
+			Content: createFeedback.Content,
+		}
+
+		err := stream.Send(req)
+		if err != nil {
+			log.Fatalf("cannot send stream request: %v - %v", err, stream.RecvMsg(nil))
+		}
+
+		log.Print("sent request: ", req)
+	}
+
+	err = stream.CloseSend()
+	if err != nil {
+		log.Fatalf("cannot close send: %v", err)
+	}
+
+	err = <-waitResponse
+	if err != nil {
+		log.Fatalf("received error: %v", err)
+	}
 }

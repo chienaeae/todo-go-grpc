@@ -35,9 +35,20 @@ message UploadImageResponse {
   uint32 size = 2;
 }
 
+message FeedbackTodoRequest {
+  string todo_id = 1;
+  string content = 2;
+}
+
+message FeedbackTodoResponse {
+  string todo_id = 1;
+  string feedback_id = 2;
+}
+
 service TodoService {
   rpc CreateTodo(CreateTodoRequest) returns (CreateTodoResponse);
   rpc GetTodos(GetTodosRequest) returns (stream GetTodosResponse);
   rpc GetTodo(GetTodoRequest) returns (GetTodoResponse);
   rpc UploadImage(stream UploadImageRequest) returns (UploadImageResponse);
+  rpc FeebackTodo(stream FeedbackTodoRequest) returns (stream FeedbackTodoResponse);
 }

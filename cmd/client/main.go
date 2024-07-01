@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/chienaeae/todo-go-grpc/client"
 	"github.com/chienaeae/todo-go-grpc/sample"
@@ -25,6 +27,31 @@ func testUploadImage(todoClient *client.TodoClient) {
 	todoClient.UploadImage(todo.Id, "tmp/aoi.jpeg")
 }
 
+func testCreateFeedbacks(todoClient *client.TodoClient) {
+	todo := sample.NewTodo()
+	todoClient.CreateTodo(todo)
+
+	n := 3
+	createFeedbacks := make([]client.CreateFeedback, n)
+	for {
+		for i := 0; i < n; i++ {
+			createFeedbacks[i] = client.CreateFeedback{
+				TodoID:  todo.Id,
+				Content: sample.NewContent(),
+			}
+		}
+
+		todoClient.FeebackTodo(createFeedbacks)
+
+		fmt.Print("continue to create feedback (y/N)?")
+		var ans string
+		fmt.Scan(&ans)
+		if strings.ToLower(ans) != "y" {
+			break
+		}
+	}
+}
+
 func main() {
 	serverAddress := flag.String("address", "", "the server address")
 	flag.Parse()
@@ -41,4 +68,5 @@ func main() {
 	testCreateTodo(todoClient)
 	testGetTodos(todoClient)
 	testUploadImage(todoClient)
+	testCreateFeedbacks(todoClient)
 }
