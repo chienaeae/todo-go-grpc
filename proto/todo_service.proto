@@ -10,13 +10,21 @@ message CreateTodoRequest { Todo todo = 1; }
 
 message CreateTodoResponse { string id = 1; }
 
+message FeedBack {
+  string id = 1;
+  string content = 2;
+}
+
 message GetTodosRequest {}
 
 message GetTodosResponse { Todo todo = 1; }
 
 message GetTodoRequest { string id = 1; }
 
-message GetTodoResponse { Todo todo = 1; }
+message GetTodoResponse {
+  Todo todo = 1; 
+  repeated FeedBack feedbacks = 2;
+}
 
 message ImageInfo {
   string todo_id = 1;

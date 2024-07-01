@@ -83,8 +83,27 @@ func (server *TodoServer) GetTodo(ctx context.Context, req *pb.GetTodoRequest) (
 		return nil, status.Errorf(codes.NotFound, "cannot find todo with ID: %v", id)
 	}
 
+	fs, err := server.feedbackStore.Find(todo.Id)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "cannot find feedback: %v", err)
+	}
+	if fs == nil {
+		fs = make([]*Feedback, 0)
+	}
+
+	feedbacks := make([]*pb.FeedBack, 0, len(fs))
+
+	for _, f := range fs {
+		log.Printf("%v: ", f)
+		feedbacks = append(feedbacks, &pb.FeedBack{
+			Id:      f.ID,
+			Content: f.Content,
+		})
+	}
+
 	res := &pb.GetTodoResponse{
-		Todo: todo,
+		Todo:      todo,
+		Feedbacks: feedbacks,
 	}
 	return res, nil
 }
@@ -189,6 +208,7 @@ func (server *TodoServer) FeebackTodo(stream pb.TodoService_FeebackTodoServer) e
 	for {
 		err := contextError(stream.Context())
 		if err != nil {
+			log.Printf("context error: %v", err)
 			return nil
 		}
 

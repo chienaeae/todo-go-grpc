@@ -9,6 +9,7 @@ import (
 
 type FeedbackStore interface {
 	Add(todoID string, content string) (*Feedback, error)
+	Find(todoID string) ([]*Feedback, error)
 }
 
 type Feedback struct {
@@ -47,5 +48,14 @@ func (store *InMemoryFeedbackStore) Add(todoID string, content string) (*Feedbac
 	}
 	feedbacks = append(feedbacks, newFeedback)
 
+	store.feedbacks[todoID] = feedbacks
 	return newFeedback, nil
+}
+
+func (store *InMemoryFeedbackStore) Find(todoID string) ([]*Feedback, error) {
+	store.mutex.RLock()
+	defer store.mutex.RUnlock()
+
+	fs := store.feedbacks[todoID]
+	return fs, nil
 }
