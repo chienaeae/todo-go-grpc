@@ -9,6 +9,7 @@ import (
 	"github.com/chienaeae/todo-go-grpc/pb"
 	"github.com/chienaeae/todo-go-grpc/service"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -32,6 +33,7 @@ func main() {
 
 	srv := grpc.NewServer()
 	pb.RegisterTodoServiceServer(srv, todoServer)
+	reflection.Register(srv)
 
 	log.Printf("Start GRPC server at %s", listener.Addr().String())
 	err = srv.Serve(listener)
