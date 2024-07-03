@@ -4,13 +4,19 @@ gen:
 clean:
 	rm pb/*
 
-server:
-	go run cmd/server/main.go -port 8080
+build-server:
+	go build -o ./bin/server ./cmd/server
 
-client:
-	go run cmd/client/main.go -address 127.0.0.1:8080
+build-client:
+	go build -o ./bin/client ./cmd/client
 
-auth-client:
-	go run cmd/client/main.go -address 127.0.0.1:8080 -service auth
+server: build-server
+	./bin/server -port 8080
+
+client: build-client
+	./bin/client -address=127.0.0.1:8080
+
+client-auth: build-client
+	./bin/client -address=127.0.0.1:8080 -service=auth
 
 .PHONY: clean gen server client auth-client

@@ -43,6 +43,8 @@ func main() {
 		testTodo(cc)
 	} else if *service == "auth" {
 		testAuth(cc)
+	} else {
+		log.Fatalf("unknown service: %s", *service)
 	}
 
 }
