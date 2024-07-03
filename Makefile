@@ -10,5 +10,7 @@ server:
 client:
 	go run cmd/client/main.go -address 127.0.0.1:8080
 
+auth-client:
+	go run cmd/client/main.go -address 127.0.0.1:8080 -service auth
 
-.PHONY: clean gen server client 
+.PHONY: clean gen server client auth-client
