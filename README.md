@@ -1,17 +1,9 @@
 # Todo GO Grpc
 
-## Auth Interceptor
+## Features
 
-part 1
-
-- auth service to protobuf
-- user
-- user store
-- jwt manager (Generate, Verify)
-- auth server
-- seed & create users
-- regiester auth server into grpc server
-
-part 2
-
-- auth interceptor
+- Create/Get Todo (Unary RPC)
+- Get Todos (Server streaming RPC)
+- Upload Image (Client streaming RPC)
+- Create Feedbacks (Bidirectional streaming RPC)
+- Auth Interceptor
