@@ -20,6 +20,7 @@ const (
 
 func seedUsers(userStore service.UserStore) error {
 	_, err := createUser(userStore, "admin", "secret", "admin")
+	_, err = createUser(userStore, "user", "secret", "user")
 	if err != nil {
 		return err
 	}
@@ -38,6 +39,17 @@ func createUser(userStore service.UserStore, username, password, role string) (*
 		return nil, err
 	}
 	return user, err
+}
+
+func accessibleRoles() map[string][]string {
+	const todoServicePath = "/todoGoGrpc.TodoService/"
+	return map[string][]string{
+		todoServicePath + "CreateTodo":   {"admin"},
+		todoServicePath + "GetTodos":     {"admin", "user"},
+		todoServicePath + "GetTodo":      {"admin", "user"},
+		todoServicePath + "FeedbackTodo": {"admin"},
+		todoServicePath + "UploadImage":  {"admin"},
+	}
 }
 
 func main() {
@@ -66,7 +78,13 @@ func main() {
 		log.Fatal("cannot start server: ", err)
 	}
 
-	srv := grpc.NewServer()
+	interceptor := service.NewAuthInterceptor(jwtManager, accessibleRoles())
+	serverOptions := []grpc.ServerOption{
+		grpc.UnaryInterceptor(interceptor.Unary()),
+		grpc.StreamInterceptor(interceptor.Stream()),
+	}
+
+	srv := grpc.NewServer(serverOptions...)
 	pb.RegisterTodoServiceServer(srv, todoServer)
 	pb.RegisterAuthServiceServer(srv, authServer)
 	reflection.Register(srv)

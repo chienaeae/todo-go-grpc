@@ -2,38 +2,38 @@ package client
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/chienaeae/todo-go-grpc/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/status"
 )
 
 type AuthClient struct {
-	service pb.AuthServiceClient
+	service  pb.AuthServiceClient
+	username string
+	password string
 }
 
-func NewAuthClient(cc *grpc.ClientConn) *AuthClient {
-	return &AuthClient{service: pb.NewAuthServiceClient(cc)}
+func NewAuthClient(cc *grpc.ClientConn, username, password string) *AuthClient {
+	return &AuthClient{
+		service:  pb.NewAuthServiceClient(cc),
+		username: username,
+		password: password,
+	}
 }
 
-func (client *AuthClient) Login(username, password string) {
-	log.Println("=== Login ===")
+func (client *AuthClient) Login() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	req := &pb.LoginRequest{
-		Username: username,
-		Password: password,
+		Username: client.username,
+		Password: client.password,
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
 
 	res, err := client.service.Login(ctx, req)
 	if err != nil {
-		st, _ := status.FromError(err)
-		log.Fatalf("cannot login: %s", st.Message())
+		return "", err
 	}
-
-	log.Printf("access token: %s", res.AccessToken)
+	return res.GetAccessToken(), err
 }
