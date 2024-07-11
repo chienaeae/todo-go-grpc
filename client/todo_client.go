@@ -75,6 +75,7 @@ func (todoClient *TodoClient) GetTodos() {
 		todo := res.GetTodo()
 		log.Printf("<%s>", todo.Id)
 		log.Print("title: ", todo.Title)
+		log.Print("from user: ", todo.FromUser)
 	}
 }
 
@@ -144,12 +145,12 @@ type CreateFeedback struct {
 	Content string
 }
 
-func (laptopClient *TodoClient) FeebackTodo(createFeedbacks []CreateFeedback) {
-	log.Println("=== FeebackTodo ===")
+func (laptopClient *TodoClient) FeedbackTodo(createFeedbacks []CreateFeedback) {
+	log.Println("=== FeedbackTodo ===")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	stream, err := laptopClient.service.FeebackTodo(ctx)
+	stream, err := laptopClient.service.FeedbackTodo(ctx)
 	if err != nil {
 		log.Fatal("cannot feedback todo: ", err)
 	}
@@ -165,6 +166,7 @@ func (laptopClient *TodoClient) FeebackTodo(createFeedbacks []CreateFeedback) {
 			}
 			if err != nil {
 				waitResponse <- fmt.Errorf("cannot receive stream response: %v", err)
+				return
 			}
 
 			log.Print("received response: ", res)

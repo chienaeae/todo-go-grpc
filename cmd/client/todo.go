@@ -37,7 +37,7 @@ func testCreateFeedbacks(todoClient *client.TodoClient) {
 			}
 		}
 
-		todoClient.FeebackTodo(createFeedbacks)
+		todoClient.FeedbackTodo(createFeedbacks)
 
 		fmt.Print("continue to create feedback (y/N)?")
 		var ans string

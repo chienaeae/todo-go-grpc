@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	username        = "admin"
+	username        = "philly"
 	password        = "secret"
 	refreshDuration = 30 * time.Second
 )

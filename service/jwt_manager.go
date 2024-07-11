@@ -1,11 +1,16 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+type contextKey string
+
+const userClaimsKey = contextKey("userClaims")
 
 type JWTManager struct {
 	secretKey     string
@@ -60,6 +65,15 @@ func (manager *JWTManager) Verify(accessToken string) (*UserClaims, error) {
 
 	if !token.Valid {
 		return nil, fmt.Errorf("invalid token")
+	}
+
+	return claims, nil
+}
+
+func GetUserClaims(ctx context.Context) (*UserClaims, error) {
+	claims, ok := ctx.Value(userClaimsKey).(*UserClaims)
+	if !ok {
+		return nil, fmt.Errorf("no user claims in context")
 	}
 
 	return claims, nil

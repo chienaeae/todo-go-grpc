@@ -8,3 +8,9 @@ message Todo {
   string id = 1;
   string title = 2;
 }
+
+message TodoResult {
+  string id = 1;
+  string title = 2;
+  string from_user = 3;
+}

@@ -53,7 +53,16 @@ func (server *TodoServer) CreateTodo(ctx context.Context, req *pb.CreateTodoRequ
 		return nil, err
 	}
 
-	err := server.todoStore.Save(todo)
+	userClaims, err := GetUserClaims(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "cannot get user claims from context: %v", err)
+	}
+
+	err = server.todoStore.Save(&Todo{
+		ID:       todo.Id,
+		Title:    todo.Title,
+		FromUser: userClaims.Username,
+	})
 	if err != nil {
 		code := codes.Internal
 		if errors.Is(err, ErrAlreadyExists) {
@@ -76,16 +85,16 @@ func (server *TodoServer) GetTodo(ctx context.Context, req *pb.GetTodoRequest) (
 	id := req.GetId()
 	todo, err := server.todoStore.GetById(id)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "unexpected error: %v", err)
+		return nil, logError(status.Errorf(codes.Internal, "unexpected error: %v", err))
 	}
 
 	if todo == nil {
-		return nil, status.Errorf(codes.NotFound, "cannot find todo with ID: %v", id)
+		return nil, logError(status.Errorf(codes.NotFound, "cannot find todo with ID: %v", id))
 	}
 
-	fs, err := server.feedbackStore.Find(todo.Id)
+	fs, err := server.feedbackStore.Find(todo.ID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "cannot find feedback: %v", err)
+		return nil, logError(status.Errorf(codes.Internal, "cannot find feedback: %v", err))
 	}
 	if fs == nil {
 		fs = make([]*Feedback, 0)
@@ -102,7 +111,11 @@ func (server *TodoServer) GetTodo(ctx context.Context, req *pb.GetTodoRequest) (
 	}
 
 	res := &pb.GetTodoResponse{
-		Todo:      todo,
+		Todo: &pb.TodoResult{
+			Id:       todo.ID,
+			Title:    todo.Title,
+			FromUser: todo.FromUser,
+		},
 		Feedbacks: feedbacks,
 	}
 	return res, nil
@@ -110,11 +123,22 @@ func (server *TodoServer) GetTodo(ctx context.Context, req *pb.GetTodoRequest) (
 
 func (server *TodoServer) GetTodos(req *pb.GetTodosRequest, stream pb.TodoService_GetTodosServer) error {
 	log.Printf("receiving todos stream")
-	err := server.todoStore.GetMany(
+
+	userClaims, err := GetUserClaims(stream.Context())
+	if err != nil {
+		return logError(status.Errorf(codes.Internal, "cannot get user claims from context: %v", err))
+	}
+
+	err = server.todoStore.GetMany(
 		stream.Context(),
-		func(todo *pb.Todo) error {
+		userClaims.Username,
+		func(todo *Todo) error {
 			res := &pb.GetTodosResponse{
-				Todo: todo,
+				Todo: &pb.TodoResult{
+					Id:       todo.ID,
+					Title:    todo.Title,
+					FromUser: todo.FromUser,
+				},
 			}
 
 			err := stream.Send(res)
@@ -122,7 +146,7 @@ func (server *TodoServer) GetTodos(req *pb.GetTodosRequest, stream pb.TodoServic
 				return err
 			}
 
-			log.Printf("sent todo with id: %s", todo.GetId())
+			log.Printf("sent todo with id: %s", todo.ID)
 			return nil
 		},
 	)
@@ -204,17 +228,21 @@ func (server *TodoServer) UploadImage(stream pb.TodoService_UploadImageServer) e
 	return nil
 }
 
-func (server *TodoServer) FeebackTodo(stream pb.TodoService_FeebackTodoServer) error {
+func (server *TodoServer) FeedbackTodo(stream pb.TodoService_FeedbackTodoServer) error {
+	userClaims, err := GetUserClaims(stream.Context())
+	if err != nil {
+		return logError(status.Errorf(codes.Internal, "cannot get user claims from context: %v", err))
+	}
+
 	for {
 		err := contextError(stream.Context())
 		if err != nil {
-			log.Printf("context error: %v", err)
-			return nil
+			return err
 		}
 
 		req, err := stream.Recv()
 		if err == io.EOF {
-			log.Print("no more feeback data")
+			log.Print("no more feedback data")
 			break
 		}
 		if err != nil {
@@ -235,9 +263,12 @@ func (server *TodoServer) FeebackTodo(stream pb.TodoService_FeebackTodoServer) e
 			return logError(status.Errorf(codes.NotFound, "todoID %s is not found", todoID))
 		}
 
-		feedback, err := server.feedbackStore.Add(todoID, content)
+		feedback, err := server.feedbackStore.Add(todoID, &Feedback{
+			Content:  content,
+			FromUser: userClaims.Username,
+		})
 		if err != nil {
-			return logError(status.Errorf(codes.Internal, "cannot add feeback to the store: %v", err))
+			return logError(status.Errorf(codes.Internal, "cannot add feedback to the store: %v", err))
 		}
 
 		res := &pb.FeedbackTodoResponse{

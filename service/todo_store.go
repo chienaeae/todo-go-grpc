@@ -7,35 +7,39 @@ import (
 	"log"
 	"sync"
 
-	"github.com/chienaeae/todo-go-grpc/pb"
 	"github.com/jinzhu/copier"
 )
-
 
 var ErrAlreadyExists = errors.New("record already exists")
 
 type TodoStore interface {
-	Save(todo *pb.Todo) error
-	GetById(id string) (*pb.Todo, error)
-	GetMany(ctx context.Context, found func(todo *pb.Todo) error) error
+	Save(todo *Todo) error
+	GetById(id string) (*Todo, error)
+	GetMany(ctx context.Context, fromUser string, found func(todo *Todo) error) error
+}
+
+type Todo struct {
+	ID       string
+	Title    string
+	FromUser string
 }
 
 type InMemoryTodoStore struct {
 	mutex sync.RWMutex
-	data map[string]*pb.Todo
+	data  map[string]*Todo
 }
 
 func NewInMemoryTodoStore() *InMemoryTodoStore {
 	return &InMemoryTodoStore{
-		data: make(map[string]*pb.Todo),
+		data: make(map[string]*Todo),
 	}
 }
 
-func (store *InMemoryTodoStore) Save(todo *pb.Todo) error {
+func (store *InMemoryTodoStore) Save(todo *Todo) error {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
 
-	if store.data[todo.Id] != nil {
+	if store.data[todo.ID] != nil {
 		return ErrAlreadyExists
 	}
 
@@ -44,11 +48,11 @@ func (store *InMemoryTodoStore) Save(todo *pb.Todo) error {
 		return err
 	}
 
-	store.data[other.Id] = other
+	store.data[other.ID] = other
 	return nil
 }
 
-func (store *InMemoryTodoStore) GetById(id string) (*pb.Todo, error) {
+func (store *InMemoryTodoStore) GetById(id string) (*Todo, error) {
 	store.mutex.RLock()
 	defer store.mutex.RUnlock()
 
@@ -60,11 +64,15 @@ func (store *InMemoryTodoStore) GetById(id string) (*pb.Todo, error) {
 	return deepCopy(todo)
 }
 
-func (store *InMemoryTodoStore) GetMany(ctx context.Context, found func(todo *pb.Todo) error ) error {
+func (store *InMemoryTodoStore) GetMany(ctx context.Context, fromUser string, found func(todo *Todo) error) error {
 	store.mutex.RLock()
 	defer store.mutex.RUnlock()
 
 	for _, todo := range store.data {
+		if todo.FromUser != fromUser {
+			continue
+		}
+
 		err := ctx.Err()
 		if err == context.Canceled || err == context.DeadlineExceeded {
 			log.Print("context is cancelled")
@@ -84,8 +92,8 @@ func (store *InMemoryTodoStore) GetMany(ctx context.Context, found func(todo *pb
 	return nil
 }
 
-func deepCopy(todo *pb.Todo) (*pb.Todo, error) {
-	other := &pb.Todo{}
+func deepCopy(todo *Todo) (*Todo, error) {
+	other := &Todo{}
 
 	if err := copier.Copy(other, todo); err != nil {
 		return nil, fmt.Errorf("cannot copy todo data: %w", err)

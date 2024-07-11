@@ -17,12 +17,12 @@ message FeedBack {
 
 message GetTodosRequest {}
 
-message GetTodosResponse { Todo todo = 1; }
+message GetTodosResponse { TodoResult todo = 1; }
 
 message GetTodoRequest { string id = 1; }
 
 message GetTodoResponse {
-  Todo todo = 1; 
+  TodoResult todo = 1; 
   repeated FeedBack feedbacks = 2;
 }
 
@@ -58,5 +58,5 @@ service TodoService {
   rpc GetTodos(GetTodosRequest) returns (stream GetTodosResponse);
   rpc GetTodo(GetTodoRequest) returns (GetTodoResponse);
   rpc UploadImage(stream UploadImageRequest) returns (UploadImageResponse);
-  rpc FeebackTodo(stream FeedbackTodoRequest) returns (stream FeedbackTodoResponse);
+  rpc FeedbackTodo(stream FeedbackTodoRequest) returns (stream FeedbackTodoResponse);
 }
